@@ -17,7 +17,12 @@ const corsOptions = {
 };
 
 // Middleware
-app.use(cors()); // Permet les requêtes cross-origin (entre ton frontend et ton backend)
+app.use(cors({
+  origin: frontendUrl,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], // Liste les méthodes HTTP que ton API utilise
+  allowedHeaders: ['Content-Type', 'Authorization'], // Liste les en-têtes personnalisés que ton frontend pourrait envoyer
+  credentials: true // Si tu utilises des cookies ou des sessions entre frontend/backend
+}));
 app.use(express.json()); // Permet à Express de parser les requêtes JSON
 
 // --- Fonctions utilitaires pour lire/écrire les utilisateurs ---
@@ -215,8 +220,7 @@ app.post('/api/groups', (req, res) => {
 });
 
 
-// Lancement du serveur
+const PORT = process.env.PORT || 3000; // Render va fournir un port via process.env.PORT
 app.listen(PORT, () => {
-    console.log(`Serveur backend démarré sur http://localhost:${PORT}`);
-    console.log("Test log : le script est bien exécuté !");
+  console.log(`Serveur démarré sur le port ${PORT}`);
 });
