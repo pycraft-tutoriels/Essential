@@ -9,6 +9,11 @@ const PORT = 5000;
 // Chemin du fichier utilisateurs
 const USERS_FILE = path.join(__dirname, 'users.json');
 
+const corsOptions = {
+  origin: 'https://essential-app-seven.vercel.app', // L'URL de ton frontend Vercel
+  optionsSuccessStatus: 200 // Pour les navigateurs hérités (IE11, divers SmartTVs)
+};
+
 // Middleware
 app.use(cors()); // Permet les requêtes cross-origin (entre ton frontend et ton backend)
 app.use(express.json()); // Permet à Express de parser les requêtes JSON
