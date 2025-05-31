@@ -6,7 +6,6 @@ const cors = require('cors');
 const frontendUrl = 'https://essential-app-seven.vercel.app';
 
 const app = express();
-const PORT = 5000;
 
 // Chemin du fichier utilisateurs
 const USERS_FILE = path.join(__dirname, 'users.json');
