@@ -52,7 +52,7 @@ function writeUsers(users) {
 // --- Routes API ---
 
 // Route d'inscription d'un nouvel utilisateur
-app.post('/api/register', (req, res) => {
+app.post('/register', (req, res) => {
     const { email, password } = req.body;
 
     // Validation basique des entrées
@@ -81,7 +81,7 @@ app.post('/api/register', (req, res) => {
 });
 
 // Route de connexion d'un utilisateur
-app.post('/api/login', (req, res) => {
+app.post('/login', (req, res) => {
     const { email, password } = req.body;
 
     // Validation basique des entrées
@@ -102,7 +102,7 @@ app.post('/api/login', (req, res) => {
 });
 
 // Route pour obtenir les données d'un utilisateur spécifique
-app.get('/api/user/:email', (req, res) => {
+app.get('/user/:email', (req, res) => {
     const email = req.params.email; // Récupère l'email depuis l'URL
 
     const users = readUsers();
@@ -118,7 +118,7 @@ app.get('/api/user/:email', (req, res) => {
 });
 
 // Route pour mettre à jour les données d'un utilisateur (contacts, groupes, conversations)
-app.put('/api/user/:email', (req, res) => {
+app.put('/user/:email', (req, res) => {
     const email = req.params.email; // Récupère l'email depuis l'URL
     const users = readUsers();
     const userIndex = users.findIndex(u => u.email === email); // Trouve l'index de l'utilisateur
@@ -141,7 +141,7 @@ app.put('/api/user/:email', (req, res) => {
 });
 
 // NOUVELLE ROUTE : Création d'un nouveau chat individuel
-app.post('/api/chats', (req, res) => {
+app.post('/chats', (req, res) => {
     // Attends userId (l'email de l'utilisateur connecté), name (nom du contact), identifier (son ID/téléphone)
     const { userId, name, identifier } = req.body;
 
@@ -179,7 +179,7 @@ app.post('/api/chats', (req, res) => {
 });
 
 // NOUVELLE ROUTE : Création d'un nouveau groupe
-app.post('/api/groups', (req, res) => {
+app.post('/groups', (req, res) => {
     // Attends userId (l'email de l'utilisateur connecté), name (nom du groupe), members (tableau de membres), endDate (date de fin)
     const { userId, name, members, endDate } = req.body;
 
