@@ -218,6 +218,53 @@ app.post('/groups', (req, res) => {
     res.status(201).json({ message: 'Groupe créé avec succès !', newGroup: newGroup });
 });
 
+// Route pour ajouter un contact à la liste d'un utilisateur
+app.post('/api/addContact', (req, res) => {
+    // Supposons que tu envoies l'email de l'utilisateur courant (celui qui ajoute)
+    // et l'email du contact à ajouter dans le corps de la requête.
+    const { userEmail, contactEmail } = req.body;
+
+    if (!userEmail || !contactEmail) {
+        return res.status(400).json({ error: 'Email de l\'utilisateur et email du contact sont requis.' });
+    }
+
+    // Un utilisateur ne peut pas s'ajouter lui-même
+    if (userEmail === contactEmail) {
+        return res.status(400).json({ error: 'Vous ne pouvez pas vous ajouter vous-même comme contact.' });
+    }
+
+    const users = readUsers();
+
+    // Trouve l'utilisateur courant (celui qui initie l'ajout)
+    const currentUserIndex = users.findIndex(u => u.email === userEmail);
+    if (currentUserIndex === -1) {
+        return res.status(404).json({ error: "Utilisateur courant non trouvé." });
+    }
+
+    // Trouve l'utilisateur à ajouter (le contact)
+    const contactUser = users.find(u => u.email === contactEmail);
+    if (!contactUser) {
+        return res.status(404).json({ error: "Le contact avec cet email n'existe pas." });
+    }
+
+    // Vérifie si le contact n'est pas déjà dans la liste de l'utilisateur courant
+    // Assumes que tes contacts sont stockés comme des objets avec au moins un 'email'
+    if (users[currentUserIndex].contacts.some(c => c.email === contactEmail)) {
+        return res.status(409).json({ error: 'Ce contact est déjà dans votre liste.' });
+    }
+
+    // Ajoute le contact à la liste de l'utilisateur courant
+    // Tu peux ajouter d'autres infos si nécessaire, comme un nom par défaut si l'app le permet
+    users[currentUserIndex].contacts.push({
+        email: contactUser.email,
+        name: contactUser.email // Ou un autre nom si tu as un champ 'name' pour les utilisateurs
+    });
+
+    writeUsers(users); // Sauvegarde les modifications
+
+    res.json({ message: 'Contact ajouté avec succès !', newContact: { email: contactUser.email, name: contactUser.email } });
+});
+
 
 const PORT = process.env.PORT || 3000; // Render va fournir un port via process.env.PORT
 app.listen(PORT, () => {
