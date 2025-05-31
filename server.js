@@ -3,6 +3,8 @@ const fs = require('fs');
 const path = require('path');
 const cors = require('cors');
 
+const frontendUrl = 'https://essential-app-seven.vercel.app';
+
 const app = express();
 const PORT = 5000;
 
