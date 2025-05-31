@@ -11,16 +11,16 @@ const app = express();
 const USERS_FILE = path.join(__dirname, 'users.json');
 
 const corsOptions = {
-  origin: 'https://essential-app-seven.vercel.app', // L'URL de ton frontend Vercel
-  optionsSuccessStatus: 200 // Pour les navigateurs hérités (IE11, divers SmartTVs)
+    origin: 'https://essential-app-seven.vercel.app', // L'URL de ton frontend Vercel
+    optionsSuccessStatus: 200 // Pour les navigateurs hérités (IE11, divers SmartTVs)
 };
 
 // Middleware
 app.use(cors({
-  origin: frontendUrl,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], // Liste les méthodes HTTP que ton API utilise
-  allowedHeaders: ['Content-Type', 'Authorization'], // Liste les en-têtes personnalisés que ton frontend pourrait envoyer
-  credentials: true // Si tu utilises des cookies ou des sessions entre frontend/backend
+    origin: frontendUrl,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], // Liste les méthodes HTTP que ton API utilise
+    allowedHeaders: ['Content-Type', 'Authorization'], // Liste les en-têtes personnalisés que ton frontend pourrait envoyer
+    credentials: true // Si tu utilises des cookies ou des sessions entre frontend/backend
 }));
 app.use(express.json()); // Permet à Express de parser les requêtes JSON
 
@@ -72,7 +72,7 @@ app.post('/register', (req, res) => {
         email,
         password, // En production, le mot de passe devrait être hashé !
         contacts: [],
-        groups: [], // Bien que les groupes soient maintenant dans 'conversations', garder 'groups' si nécessaire pour d'autres fonctionnalités
+        groups: [],
         conversations: [] // Toutes les discussions (chats individuels et groupes)
     });
     writeUsers(users); // Sauvegarde la liste mise à jour des utilisateurs
@@ -140,9 +140,8 @@ app.put('/user/:email', (req, res) => {
     res.json({ message: "Données utilisateur mises à jour avec succès !" });
 });
 
-// NOUVELLE ROUTE : Création d'un nouveau chat individuel
+// Route : Création d'un nouveau chat individuel
 app.post('/chats', (req, res) => {
-    // Attends userId (l'email de l'utilisateur connecté), name (nom du contact), identifier (son ID/téléphone)
     const { userId, name, identifier } = req.body;
 
     if (!userId || !name || !identifier) {
@@ -156,7 +155,6 @@ app.post('/chats', (req, res) => {
         return res.status(404).json({ error: "Utilisateur non trouvé." });
     }
 
-    // Génère un ID unique pour la nouvelle conversation
     const newChatId = `chat_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
     const newChat = {
@@ -170,17 +168,14 @@ app.post('/chats', (req, res) => {
         messages: [] // Tableau pour stocker les messages de cette conversation
     };
 
-    // Ajoute la nouvelle conversation au tableau 'conversations' de l'utilisateur
     users[userIndex].conversations.push(newChat);
-    writeUsers(users); // Sauvegarde les données mises à jour
+    writeUsers(users);
 
-    // Renvoie la nouvelle conversation créée pour que le frontend puisse l'utiliser si besoin
     res.status(201).json({ message: 'Chat créé avec succès !', newChat: newChat });
 });
 
-// NOUVELLE ROUTE : Création d'un nouveau groupe
+// Route : Création d'un nouveau groupe
 app.post('/groups', (req, res) => {
-    // Attends userId (l'email de l'utilisateur connecté), name (nom du groupe), members (tableau de membres), endDate (date de fin)
     const { userId, name, members, endDate } = req.body;
 
     if (!userId || !name || !members || !Array.isArray(members) || !endDate) {
@@ -194,7 +189,6 @@ app.post('/groups', (req, res) => {
         return res.status(404).json({ error: "Utilisateur non trouvé." });
     }
 
-    // Génère un ID unique pour le nouveau groupe
     const newGroupId = `group_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
     const newGroup = {
@@ -206,21 +200,18 @@ app.post('/groups', (req, res) => {
         time: new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }), // Heure de création
         isGroup: true, // Indique que c'est un groupe
         isPriority: false, // Par défaut, non prioritaire
-        timer: 'N/A', // Sera calculé côté frontend ou si tu as une logique backend pour ça
+        timer: 'N/A',
         messages: [] // Tableau pour stocker les messages de ce groupe
     };
 
-    // Ajoute le nouveau groupe au tableau 'conversations' de l'utilisateur
     users[userIndex].conversations.push(newGroup);
-    writeUsers(users); // Sauvegarde les données mises à jour
+    writeUsers(users);
 
-    // Renvoie le nouveau groupe créé
     res.status(201).json({ message: 'Groupe créé avec succès !', newGroup: newGroup });
 });
 
-// Backend (e.g., in your app.js or a dedicated contacts.js route file)
-
-app.post('/contacts/add-by-email', async (req, res) => {
+// --- ROUTE MODIFIÉE : Ajout d'un contact par e-mail ---
+app.post('/contacts/add-by-email', (req, res) => { // Supprimez 'async' ici
     const { adderEmail, contactEmail, contactName } = req.body;
 
     if (!adderEmail || !contactEmail || !contactName) {
@@ -231,43 +222,52 @@ app.post('/contacts/add-by-email', async (req, res) => {
     }
 
     try {
-        // 1. Find the current user (the one adding the contact)
-        const currentUser = await User.findOne({ email: adderEmail });
-        if (!currentUser) {
+        const users = readUsers(); // Lisez tous les utilisateurs
+
+        // 1. Trouver l'utilisateur actuel (celui qui ajoute le contact)
+        const currentUserIndex = users.findIndex(u => u.email === adderEmail);
+        if (currentUserIndex === -1) {
             return res.status(404).json({ error: 'Adding user not found.' });
         }
+        const currentUser = users[currentUserIndex];
 
-        // 2. Find the contact user (the one to be added)
-        const contactUser = await User.findOne({ email: contactEmail });
-        if (!contactUser) {
+        // 2. Trouver l'utilisateur contact (celui à ajouter)
+        const contactUserIndex = users.findIndex(u => u.email === contactEmail);
+        if (contactUserIndex === -1) {
             return res.status(404).json({ error: 'Contact email not found in our system.' });
         }
+        const contactUser = users[contactUserIndex];
 
-        // 3. Check if a conversation already exists between them
+        // 3. Vérifier si une conversation existe déjà entre eux
+        // Nous allons parcourir les conversations de l'utilisateur actuel
+        // et vérifier si une conversation individuelle inclut les deux participants.
         const existingConversation = currentUser.conversations.find(
-            conv => !conv.isGroup && (conv.participants.includes(contactEmail) && conv.participants.includes(adderEmail))
+            conv => !conv.isGroup &&
+                    conv.participants && // Assurez-vous que 'participants' existe
+                    conv.participants.includes(contactEmail) &&
+                    conv.participants.includes(adderEmail)
         );
         if (existingConversation) {
             return res.status(409).json({ error: 'Conversation with this contact already exists.' });
         }
 
-        // 4. Create a new conversation ID (you might use UUIDs)
-        const newConversationId = `chat_${Date.now()}`; // Example simple ID
+        // 4. Créer un nouvel ID de conversation
+        const newConversationId = `chat_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-        // 5. Create the new conversation object
+        // 5. Créer les nouveaux objets conversation
         const newConversationForAdder = {
             id: newConversationId,
-            name: contactName, // The name the adder chooses for this contact
+            name: contactName, // Le nom que l'ajoutant choisit pour ce contact
             lastMessage: '',
             time: new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
             isGroup: false,
-            participants: [adderEmail, contactEmail], // Store participants' emails
+            participants: [adderEmail, contactEmail], // Stocker les e-mails des participants
             messages: []
         };
 
         const newConversationForContact = {
-            id: newConversationId, // Same ID for both sides of the conversation
-            name: currentUser.email, // The contact sees the adder's email/name
+            id: newConversationId, // Même ID pour les deux côtés de la conversation
+            name: currentUser.email, // Le contact voit l'e-mail de l'ajoutant
             lastMessage: '',
             time: new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
             isGroup: false,
@@ -275,12 +275,14 @@ app.post('/contacts/add-by-email', async (req, res) => {
             messages: []
         };
 
-        // 6. Add the new conversation to both users' conversation lists
+        // 6. Ajouter la nouvelle conversation aux listes de conversations des deux utilisateurs
         currentUser.conversations.push(newConversationForAdder);
         contactUser.conversations.push(newConversationForContact);
 
-        await currentUser.save();
-        await contactUser.save();
+        // Mettre à jour les utilisateurs dans le tableau global et sauvegarder
+        users[currentUserIndex] = currentUser;
+        users[contactUserIndex] = contactUser;
+        writeUsers(users); // Sauvegarde toutes les modifications
 
         res.status(201).json({ message: 'Contact added and chat created successfully!', newChat: newConversationForAdder });
 
@@ -290,18 +292,25 @@ app.post('/contacts/add-by-email', async (req, res) => {
     }
 });
 
-// Also, ensure your PUT /user/:email route can handle updates to the conversations array
-app.put('/user/:email', async (req, res) => {
+// --- ROUTE MODIFIÉE : Mise à jour des données utilisateur ---
+app.put('/user/:email', (req, res) => { // Supprimez 'async' ici
     const userEmail = decodeURIComponent(req.params.email);
-    const { conversations } = req.body;
+    const { conversations } = req.body; // Récupère seulement 'conversations' pour cette route
+
+    const users = readUsers();
+    const userIndex = users.findIndex(u => u.email === userEmail);
+
+    if (userIndex === -1) {
+        return res.status(404).json({ error: 'User not found.' });
+    }
 
     try {
-        const user = await User.findOne({ email: userEmail });
-        if (!user) {
-            return res.status(404).json({ error: 'User not found.' });
+        // Met à jour la conversation uniquement si elle est fournie
+        if (conversations) {
+            users[userIndex].conversations = conversations;
         }
-        user.conversations = conversations; // Update the conversations array
-        await user.save();
+        writeUsers(users); // Sauvegarde les modifications
+
         res.status(200).json({ message: 'User data updated successfully.' });
     } catch (error) {
         console.error('Error updating user data:', error);
@@ -309,7 +318,7 @@ app.put('/user/:email', async (req, res) => {
     }
 });
 
-const PORT = process.env.PORT || 3000; // Render va fournir un port via process.env.PORT
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`Serveur démarré sur le port ${PORT}`);
+    console.log(`Serveur démarré sur le port ${PORT}`);
 });
