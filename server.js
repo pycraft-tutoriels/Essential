@@ -218,53 +218,96 @@ app.post('/groups', (req, res) => {
     res.status(201).json({ message: 'Groupe créé avec succès !', newGroup: newGroup });
 });
 
-// Route pour ajouter un contact à la liste d'un utilisateur
-app.post('/addContact', (req, res) => {
-    // Supposons que tu envoies l'email de l'utilisateur courant (celui qui ajoute)
-    // et l'email du contact à ajouter dans le corps de la requête.
-    const { userEmail, contactEmail } = req.body;
+// Backend (e.g., in your app.js or a dedicated contacts.js route file)
 
-    if (!userEmail || !contactEmail) {
-        return res.status(400).json({ error: 'Email de l\'utilisateur et email du contact sont requis.' });
+app.post('/contacts/add-by-email', async (req, res) => {
+    const { adderEmail, contactEmail, contactName } = req.body;
+
+    if (!adderEmail || !contactEmail || !contactName) {
+        return res.status(400).json({ error: 'Missing required fields.' });
+    }
+    if (adderEmail === contactEmail) {
+        return res.status(400).json({ error: 'Cannot add yourself as a contact.' });
     }
 
-    // Un utilisateur ne peut pas s'ajouter lui-même
-    if (userEmail === contactEmail) {
-        return res.status(400).json({ error: 'Vous ne pouvez pas vous ajouter vous-même comme contact.' });
+    try {
+        // 1. Find the current user (the one adding the contact)
+        const currentUser = await User.findOne({ email: adderEmail });
+        if (!currentUser) {
+            return res.status(404).json({ error: 'Adding user not found.' });
+        }
+
+        // 2. Find the contact user (the one to be added)
+        const contactUser = await User.findOne({ email: contactEmail });
+        if (!contactUser) {
+            return res.status(404).json({ error: 'Contact email not found in our system.' });
+        }
+
+        // 3. Check if a conversation already exists between them
+        const existingConversation = currentUser.conversations.find(
+            conv => !conv.isGroup && (conv.participants.includes(contactEmail) && conv.participants.includes(adderEmail))
+        );
+        if (existingConversation) {
+            return res.status(409).json({ error: 'Conversation with this contact already exists.' });
+        }
+
+        // 4. Create a new conversation ID (you might use UUIDs)
+        const newConversationId = `chat_${Date.now()}`; // Example simple ID
+
+        // 5. Create the new conversation object
+        const newConversationForAdder = {
+            id: newConversationId,
+            name: contactName, // The name the adder chooses for this contact
+            lastMessage: '',
+            time: new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
+            isGroup: false,
+            participants: [adderEmail, contactEmail], // Store participants' emails
+            messages: []
+        };
+
+        const newConversationForContact = {
+            id: newConversationId, // Same ID for both sides of the conversation
+            name: currentUser.email, // The contact sees the adder's email/name
+            lastMessage: '',
+            time: new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
+            isGroup: false,
+            participants: [adderEmail, contactEmail],
+            messages: []
+        };
+
+        // 6. Add the new conversation to both users' conversation lists
+        currentUser.conversations.push(newConversationForAdder);
+        contactUser.conversations.push(newConversationForContact);
+
+        await currentUser.save();
+        await contactUser.save();
+
+        res.status(201).json({ message: 'Contact added and chat created successfully!', newChat: newConversationForAdder });
+
+    } catch (error) {
+        console.error('Error adding contact:', error);
+        res.status(500).json({ error: 'Server error during contact addition.' });
     }
-
-    const users = readUsers();
-
-    // Trouve l'utilisateur courant (celui qui initie l'ajout)
-    const currentUserIndex = users.findIndex(u => u.email === userEmail);
-    if (currentUserIndex === -1) {
-        return res.status(404).json({ error: "Utilisateur courant non trouvé." });
-    }
-
-    // Trouve l'utilisateur à ajouter (le contact)
-    const contactUser = users.find(u => u.email === contactEmail);
-    if (!contactUser) {
-        return res.status(404).json({ error: "Le contact avec cet email n'existe pas." });
-    }
-
-    // Vérifie si le contact n'est pas déjà dans la liste de l'utilisateur courant
-    // Assumes que tes contacts sont stockés comme des objets avec au moins un 'email'
-    if (users[currentUserIndex].contacts.some(c => c.email === contactEmail)) {
-        return res.status(409).json({ error: 'Ce contact est déjà dans votre liste.' });
-    }
-
-    // Ajoute le contact à la liste de l'utilisateur courant
-    // Tu peux ajouter d'autres infos si nécessaire, comme un nom par défaut si l'app le permet
-    users[currentUserIndex].contacts.push({
-        email: contactUser.email,
-        name: contactUser.email // Ou un autre nom si tu as un champ 'name' pour les utilisateurs
-    });
-
-    writeUsers(users); // Sauvegarde les modifications
-
-    res.json({ message: 'Contact ajouté avec succès !', newContact: { email: contactUser.email, name: contactUser.email } });
 });
 
+// Also, ensure your PUT /user/:email route can handle updates to the conversations array
+app.put('/user/:email', async (req, res) => {
+    const userEmail = decodeURIComponent(req.params.email);
+    const { conversations } = req.body;
+
+    try {
+        const user = await User.findOne({ email: userEmail });
+        if (!user) {
+            return res.status(404).json({ error: 'User not found.' });
+        }
+        user.conversations = conversations; // Update the conversations array
+        await user.save();
+        res.status(200).json({ message: 'User data updated successfully.' });
+    } catch (error) {
+        console.error('Error updating user data:', error);
+        res.status(500).json({ error: 'Server error updating user data.' });
+    }
+});
 
 const PORT = process.env.PORT || 3000; // Render va fournir un port via process.env.PORT
 app.listen(PORT, () => {
