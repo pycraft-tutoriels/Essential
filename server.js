@@ -219,7 +219,7 @@ app.post('/groups', (req, res) => {
 });
 
 // Route pour ajouter un contact à la liste d'un utilisateur
-app.post('/api/addContact', (req, res) => {
+app.post('/addContact', (req, res) => {
     // Supposons que tu envoies l'email de l'utilisateur courant (celui qui ajoute)
     // et l'email du contact à ajouter dans le corps de la requête.
     const { userEmail, contactEmail } = req.body;
