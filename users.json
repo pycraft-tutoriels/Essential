@@ -1,0 +1,42 @@
+[
+  {
+    "email": "come.citton@gmail.com",
+    "password": "drgbgv"
+  },
+  {
+    "email": "come.cittron@gmail.com",
+    "password": "er",
+    "contacts": [],
+    "groups": [],
+    "conversations": [
+      {
+        "id": "chat_1748685370163_afqqlta5k",
+        "name": "alice",
+        "identifier": "ds",
+        "lastMessage": "",
+        "time": "11:56",
+        "isGroup": false,
+        "isPriority": false,
+        "messages": []
+      },
+      {
+        "id": "chat_1748685468091_1hgcykq1x",
+        "name": "qfd",
+        "identifier": "wscvx",
+        "lastMessage": "sdvcwx",
+        "time": "11:58",
+        "isGroup": false,
+        "isPriority": false,
+        "messages": [
+          {
+            "id": 1748685487257,
+            "text": "sdvcwx",
+            "sender": "Moi",
+            "isPriority": false,
+            "timestamp": "11:58"
+          }
+        ]
+      }
+    ]
+  }
+]
