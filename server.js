@@ -191,6 +191,35 @@ app.post('/chats', (req, res) => {
     res.status(201).json({ message: 'Chat créé avec succès !', newChat: newChat });
 });
 
+app.post('/messages', (req, res) => {
+    const { conversationId, message } = req.body;
+    if (!conversationId || !message) {
+        return res.status(400).json({ error: "conversationId et message sont requis." });
+    }
+
+    const users = readUsers();
+    let updated = false;
+
+    // Pour chaque utilisateur, ajoute le message à la conversation correspondante si elle existe
+    users.forEach(user => {
+        const conv = user.conversations.find(c => c.id === conversationId);
+        if (conv) {
+            if (!conv.messages) conv.messages = [];
+            conv.messages.push(message);
+            conv.lastMessage = message.text;
+            conv.time = message.timestamp;
+            updated = true;
+        }
+    });
+
+    if (updated) {
+        writeUsers(users);
+        res.json({ message: "Message envoyé à tous les participants." });
+    } else {
+        res.status(404).json({ error: "Conversation non trouvée." });
+    }
+});
+
 // NOUVELLE ROUTE : Création d'un nouveau groupe
 app.post('/groups', (req, res) => {
     // Attends userId (l'email de l'utilisateur connecté), name (nom du groupe), members (tableau de membres), endDate (date de fin)
